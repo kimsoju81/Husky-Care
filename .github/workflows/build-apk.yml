@@ -1,4 +1,4 @@
-name: Bina Husky-Care TWA APK
+name: Bina Husky Care TWA APK
 
 on:
   workflow_dispatch:
@@ -28,6 +28,7 @@ jobs:
 
       - name: Pasang Android Command-line Tools & SDK
         run: |
+          set -e
           ANDROID_SDK_ROOT="$HOME/android-sdk"
           mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
           curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
@@ -35,11 +36,13 @@ jobs:
           mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
           rm cmdline-tools.zip
 
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null
-          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
             "platform-tools" \
             "platforms;android-34" \
-            "build-tools;34.0.0"
+            "platforms;android-35" \
+            "build-tools;34.0.0" \
+            "build-tools;35.0.0"
 
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
@@ -48,35 +51,18 @@ jobs:
       - name: Pasang Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Jana Keystore Tandatangan APK
+      - name: Sediakan Keystore Tandatangan APK
         run: |
-          keytool -genkeypair -v \
-            -keystore "$GITHUB_WORKSPACE/android.keystore" \
-            -alias husky-caretkey \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass husky-caret123 \
-            -keypass husky-care123 \
-            -dname "CN=Husky-Care, OU=Development, O=Husky-Care, L=Melaka, ST=Melaka, C=MY"
+          set -e
+          if [ -n "${{ secrets.HUSKYCARE_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.HUSKYCARE_KEYSTORE_BASE64 }}" \vert{} base64 -d > "$GITHUB_WORKSPACE/android.keystore"
+          else
+            keytool -genkeypair -v -keystore "$GITHUB_WORKSPACE/android.keystore" -alias huskycarekey -keyalg RSA -keysize 2048 -validity 10000 -storepass huskycare123 -keypass huskycare123 -dname "CN=Husky Care, OU=Development, O=Husky Care, L=Melaka, ST=Melaka, C=MY"
+          fi
 
       - name: Cipta konfigurasi Bubblewrap & Bina APK
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/twa-project"
-          cd "$GITHUB_WORKSPACE/twa-project"
-          printf 'n\nn\nn\nn\nn\nn\nn\nn\n' | bubblewrap init \
-            --manifest="https://kimsoju81.github.io/Husky-Care/manifest.json" \
-            --directory="." \
-            --jdkPath="$JAVA_HOME" \
-            --androidSdkPath="$ANDROID_HOME" \
-            --signingKeyPath="$GITHUB_WORKSPACE/android.keystore" \
-            --signingKeyAlias="husky-carekey" \
-            --storePassword="husky-care23" \
-            --keyPassword="husky-care123"
-          bubblewrap build --skipPwaValidation
-
-      - name: Muat Naik Fail APK sebagai Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Husky-Care-Android-APK
-          path: twa-project/**/*.apk
+          set -e
+          mkdir -p "$HOME/.bubblewrap"
+          cat <<EOF > "$HOME/.bubblewrap/config.json"
+          {
