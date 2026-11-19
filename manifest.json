@@ -1,0 +1,41 @@
+{
+  "id": "./index.html",
+  "name": "Sym Husky Care",
+  "short_name": "HuskyCare",
+  "description": "Sistem Penjagaan, Rekod Penyelenggaraan Berkala & Panduan Komprehensif Pemilik SYM Husky 150 Malaysia.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#efece1",
+  "theme_color": "#0f1c30",
+  "lang": "ms",
+  "dir": "ltr",
+  "categories": ["utilities", "productivity", "lifestyle"],
+  "icons": [
+    {
+      "src": "./pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./pwa-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
