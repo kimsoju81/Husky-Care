@@ -36,7 +36,7 @@ jobs:
             ~/android-sdk/build-tools
             ~/android-sdk/platform-tools
             ~/android-sdk/cmdline-tools
-          key: gradle-android-sdk-${{ runner.os }}-34-35-v6
+          key: gradle-android-sdk-${{ runner.os }}-34-35-v7
 
       - name: Pasang Android Command-line Tools & SDK
         run: |
@@ -246,10 +246,10 @@ jobs:
           export BUBBLEWRAP_KEYSTORE_PASSWORD="$KEYSTORE_PASS"
           export BUBBLEWRAP_KEY_PASSWORD="$KEYSTORE_PASS"
 
-          bubblewrap update --skipPwaValidation
+          printf "1.0.0\n1.0.0\n1.0.0\n" | bubblewrap update --skipPwaValidation
           kill $SERVER_PID 2>/dev/null || true
 
-          printf "%s\n%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation
+          printf "%s\n%s\n%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation
 
       - name: Muat Naik Fail APK sebagai Artifact
         uses: actions/upload-artifact@v4
