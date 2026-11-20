@@ -35,18 +35,21 @@ jobs:
             ~/android-sdk/platforms
             ~/android-sdk/build-tools
             ~/android-sdk/platform-tools
-          key: gradle-android-sdk-${{ runner.os }}-34-35
+            ~/android-sdk/cmdline-tools
+          key: gradle-android-sdk-${{ runner.os }}-34-35-v2
 
       - name: Pasang Android Command-line Tools & SDK
         run: |
           set -e
           ANDROID_SDK_ROOT="$HOME/android-sdk"
-          if [ ! -d "$ANDROID_SDK_ROOT/cmdline-tools/latest" ]; then
-            mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+
+          if [ ! -d "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" ]; then
+            rm -rf "$ANDROID_SDK_ROOT/cmdline-tools/latest"
             curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
             unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
             mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-            rm cmdline-tools.zip
+            rm -f cmdline-tools.zip
           fi
 
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
@@ -86,22 +89,19 @@ jobs:
       - name: Cipta konfigurasi Bubblewrap & Bina APK
         run: |
           set -e
+          SDK_DIR="$HOME/android-sdk"
+          JDK_DIR="${JAVA_HOME}"
+
           mkdir -p "$HOME/.bubblewrap"
           cat <<EOF > "$HOME/.bubblewrap/config.json"
           {
-            "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${ANDROID_SDK_ROOT}"
+            "jdkPath": "$JDK_DIR",
+            "androidSdkPath": "$SDK_DIR"
           }
           EOF
 
           mkdir -p "$GITHUB_WORKSPACE/twa-project"
           cd "$GITHUB_WORKSPACE/twa-project"
-
-          manifestUrl="https://kimsoju81.github.io/Husky-Care/manifest.json"
-
-          if [ ! -f "build.gradle" ] && [ ! -f "app/build.gradle" ]; then
-            printf "\n\n\n\n\n\n\n\n\n\n" | bubblewrap init --manifest="$manifestUrl" --skipPwaValidation || true
-          fi
 
           node -e '
             const https = require("https");
@@ -167,8 +167,8 @@ jobs:
                     path: process.env.GITHUB_WORKSPACE + "/android.keystore",
                     alias: "huskycarekey"
                   },
-                  appVersionName: existing.appVersionName || "1.0.0",
-                  appVersionCode: existing.appVersionCode || 1,
+                  appVersionName: "1.0.0",
+                  appVersionCode: 1,
                   shortcuts: [],
                   generatorApp: "bubblewrap-cli",
                   webManifestUrl: manifestUrl,
@@ -197,12 +197,14 @@ jobs:
             });
           '
 
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
-
           export BUBBLEWRAP_KEYSTORE_PASSWORD="$KEYSTORE_PASS"
           export BUBBLEWRAP_KEY_PASSWORD="$KEYSTORE_PASS"
 
-          printf "\n\n\n\n\n" | bubblewrap update --skipPwaValidation || true
+          if [ ! -f "build.gradle" ] && [ ! -f "app/build.gradle" ]; then
+            printf "1.0.0\n1\n\n\n\n\n\n\n\n\n" | bubblewrap init --manifest="https://kimsoju81.github.io/Husky-Care/manifest.json" --skipPwaValidation || true
+          fi
+
+          printf "1.0.0\n1\n\n\n\n" | bubblewrap update --skipPwaValidation || true
           printf "%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation
 
       - name: Muat Naik Fail APK sebagai Artifact
