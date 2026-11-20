@@ -9,7 +9,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repositori
@@ -26,15 +26,31 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Cache Gradle & Android SDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/android-sdk/platforms
+            ~/android-sdk/build-tools
+            ~/android-sdk/platform-tools
+            ~/android-sdk/cmdline-tools
+          key: gradle-android-sdk-${{ runner.os }}-34-35-v4
+
       - name: Pasang Android Command-line Tools & SDK
         run: |
           set -e
           ANDROID_SDK_ROOT="$HOME/android-sdk"
           mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
-          unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
-          mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-          rm cmdline-tools.zip
+
+          if [ ! -d "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" ]; then
+            rm -rf "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+            curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
+            unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+            mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+            rm -f cmdline-tools.zip
+          fi
 
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
@@ -73,124 +89,146 @@ jobs:
       - name: Cipta konfigurasi Bubblewrap & Bina APK
         run: |
           set -e
+          SDK_DIR="$HOME/android-sdk"
+          JDK_DIR="${JAVA_HOME:-$(dirname $(dirname $(readlink -f $(which java))))}"
+
           mkdir -p "$HOME/.bubblewrap"
           cat <<EOF > "$HOME/.bubblewrap/config.json"
           {
-            "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${ANDROID_SDK_ROOT}"
+            "jdkPath": "$JDK_DIR",
+            "androidSdkPath": "$SDK_DIR"
           }
+          EOF
+
+          mkdir -p "$HOME/.gradle"
+          cat <<EOF > "$HOME/.gradle/gradle.properties"
+          org.gradle.daemon=false
+          org.gradle.jvmargs=-Xmx2560m -XX:MaxMetaspaceSize=512m
           EOF
 
           mkdir -p "$GITHUB_WORKSPACE/twa-project"
           cd "$GITHUB_WORKSPACE/twa-project"
 
-          manifestUrl="https://kimsoju81.github.io/Husky-Care/manifest.json"
-
-          if [ ! -f "build.gradle" ] && [ ! -f "app/build.gradle" ]; then
-            (while true; do echo ""; done) | bubblewrap init --manifest="$manifestUrl" --skipPwaValidation || true
-          fi
+          python3 -c '
+          import urllib.request, os, zlib, struct
+          out_path = os.path.abspath("icon-512.png")
+          candidate_urls = [
+              "https://kimsoju81.github.io/Husky-Care/pwa-512x512.png",
+              "https://kimsoju81.github.io/Husky-Care/icons/icon-512.png",
+              "https://kimsoju81.github.io/Husky-Care/icon-512.png"
+          ]
+          downloaded = False
+          for u in candidate_urls:
+              try:
+                  with urllib.request.urlopen(u, timeout=10) as r:
+                      if r.status == 200:
+                          data = r.read()
+                          if data[:8] == b"\x89PNG\r\n\x1a\n":
+                              with open(out_path, "wb") as f:
+                                  f.write(data)
+                              downloaded = True
+                              print("Downloaded icon from:", u)
+                              break
+              except Exception:
+                  pass
+          if not downloaded:
+              w, h = 512, 512
+              raw = bytearray()
+              for _ in range(h):
+                  raw.append(0)
+                  for _ in range(w):
+                      raw.extend((0, 31, 63, 255))
+              def chunk(tag, body):
+                  return struct.pack("!I", len(body)) + tag + body + struct.pack("!I", zlib.crc32(tag + body) & 0xffffffff)
+              ihdr = struct.pack("!IIBBBBB", w, h, 8, 6, 0, 0, 0)
+              idat = zlib.compress(bytes(raw), level=6)
+              png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
+              with open(out_path, "wb") as f:
+                  f.write(png)
+              print("Generated fallback local PNG at:", out_path)
+          '
 
           node -e '
             const https = require("https");
             const fs = require("fs");
+            const path = require("path");
 
             const appHost = "kimsoju81.github.io";
             const appBaseUrl = "https://" + appHost + "/Husky-Care";
             const manifestUrl = "https://kimsoju81.github.io/Husky-Care/manifest.json";
-
-            function resolveUrl(u, fallback) {
-              if (!u) return fallback;
-              if (u.startsWith("http://") || u.startsWith("https://")) return u;
-              if (u.startsWith("/")) return "https://kimsoju81.github.io" + u;
-              return "https://kimsoju81.github.io/Husky-Care/" + u;
-            }
+            const localIconUrl = "file://" + path.resolve("icon-512.png");
 
             https.get(manifestUrl, (res) => {
-              if (res.statusCode !== 200) {
-                console.error("Gagal memuat turun manifest. HTTP Status:", res.statusCode);
-                process.exit(1);
-              }
-              let data = "";
-              res.on("data", chunk => data += chunk);
-              res.on("end", () => {
-                let webManifest = {};
-                try {
-                  webManifest = JSON.parse(data);
-                } catch (e) {
-                  console.error("Manifest bukan JSON yang sah:", e.message);
-                  process.exit(1);
-                }
-
-                let existing = {};
-                if (fs.existsSync("twa-manifest.json")) {
-                  try {
-                    existing = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8"));
-                  } catch (_) {}
-                }
-
-                const icons = Array.isArray(webManifest.icons) ? webManifest.icons : [];
-                const bestIcon = icons.find(i => i.sizes && i.sizes.includes("512x512")) || icons[icons.length - 1] || {};
-                const resolvedIconUrl = resolveUrl(bestIcon.src, "https://kimsoju81.github.io/Husky-Care/icons/icon-512.png");
-
-                const twaManifest = Object.assign({}, existing, {
-                  packageId: "io.github.kimsoju81.huskycare.twa",
-                  host: appHost,
-                  name: webManifest.name || "Husky Care",
-                  launcherName: webManifest.short_name || "Husky Care",
-                  display: webManifest.display || "standalone",
-                  themeColor: webManifest.theme_color || "#001F3F",
-                  themeColorDark: webManifest.theme_color || "#001F3F",
-                  navigationColor: webManifest.background_color || "#ffffff",
-                  navigationColorDark: webManifest.background_color || "#000000",
-                  navigationDividerColor: "#000000",
-                  navigationDividerColorDark: "#000000",
-                  backgroundColor: webManifest.background_color || "#ffffff",
-                  enableNotifications: false,
-                  startUrl: "/Husky-Care/",
-                  iconUrl: resolvedIconUrl,
-                  maskableIconUrl: resolvedIconUrl,
-                  splashScreenFadeOutDuration: 300,
-                  signingKey: {
-                    path: process.env.GITHUB_WORKSPACE + "/android.keystore",
-                    alias: "huskycarekey"
-                  },
-                  appVersionName: existing.appVersionName || "1.0.0",
-                  appVersionCode: existing.appVersionCode || 1,
-                  shortcuts: [],
-                  generatorApp: "bubblewrap-cli",
-                  webManifestUrl: manifestUrl,
-                  fallbackType: "customtabs",
-                  features: {},
-                  alphaDependencies: {
-                    enabled: false
-                  },
-                  enableSiteSettingsShortcut: true,
-                  isChromeOSOnly: false,
-                  isMetaQuest: false,
-                  fullScopeUrl: appBaseUrl + "/",
-                  minSdkVersion: 21,
-                  orientation: webManifest.orientation || "default",
-                  fingerprints: existing.fingerprints || [],
-                  additionalTrustedOrigins: [],
-                  retainedHashes: existing.retainedHashes || []
+              let webManifest = {};
+              if (res.statusCode === 200) {
+                let data = "";
+                res.on("data", chunk => data += chunk);
+                res.on("end", () => {
+                  try { webManifest = JSON.parse(data); } catch (_) {}
+                  writeTwa(webManifest);
                 });
+              } else {
+                writeTwa(webManifest);
+              }
+            }).on("error", () => writeTwa({}));
 
-                fs.writeFileSync("twa-manifest.json", JSON.stringify(twaManifest, null, 2));
-                console.log("Berjaya menjana twa-manifest.json untuk", appBaseUrl);
+            function writeTwa(webManifest) {
+              let existing = {};
+              if (fs.existsSync("twa-manifest.json")) {
+                try { existing = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8")); } catch (_) {}
+              }
+
+              const twaManifest = Object.assign({}, existing, {
+                packageId: "io.github.kimsoju81.huskycare.twa",
+                host: appHost,
+                name: webManifest.name || "Husky Care",
+                launcherName: webManifest.short_name || "Husky Care",
+                display: webManifest.display || "standalone",
+                themeColor: webManifest.theme_color || "#001F3F",
+                themeColorDark: webManifest.theme_color || "#001F3F",
+                navigationColor: webManifest.background_color || "#ffffff",
+                navigationColorDark: webManifest.background_color || "#000000",
+                navigationDividerColor: "#000000",
+                navigationDividerColorDark: "#000000",
+                backgroundColor: webManifest.background_color || "#ffffff",
+                enableNotifications: false,
+                startUrl: "/Husky-Care/",
+                iconUrl: localIconUrl,
+                maskableIconUrl: localIconUrl,
+                splashScreenFadeOutDuration: 300,
+                signingKey: {
+                  path: process.env.GITHUB_WORKSPACE + "/android.keystore",
+                  alias: "huskycarekey"
+                },
+                appVersionName: "1.0.0",
+                appVersionCode: 1,
+                shortcuts: [],
+                generatorApp: "bubblewrap-cli",
+                webManifestUrl: manifestUrl,
+                fallbackType: "customtabs",
+                features: {},
+                alphaDependencies: { enabled: false },
+                enableSiteSettingsShortcut: true,
+                isChromeOSOnly: false,
+                isMetaQuest: false,
+                fullScopeUrl: appBaseUrl + "/",
+                minSdkVersion: 21,
+                orientation: webManifest.orientation || "default",
+                fingerprints: existing.fingerprints || [],
+                additionalTrustedOrigins: [],
+                retainedHashes: existing.retainedHashes || []
               });
-            }).on("error", (err) => {
-              console.error("Ralat rangkaian semasa mengambil manifest:", err.message);
-              process.exit(1);
-            });
-          '
 
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
+              fs.writeFileSync("twa-manifest.json", JSON.stringify(twaManifest, null, 2));
+              console.log("Generated twa-manifest.json with local icon:", localIconUrl);
+            }
+          '
 
           export BUBBLEWRAP_KEYSTORE_PASSWORD="$KEYSTORE_PASS"
           export BUBBLEWRAP_KEY_PASSWORD="$KEYSTORE_PASS"
 
-          (while true; do echo ""; done) | bubblewrap update --skipPwaValidation || true
-          (while true; do printf "%s\n" "$KEYSTORE_PASS"; done) | bubblewrap build --skipPwaValidation
+          bubblewrap update --skipPwaValidation
+          printf "%s\n%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation
 
       - name: Muat Naik Fail APK sebagai Artifact
         uses: actions/upload-artifact@v4
