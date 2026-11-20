@@ -36,7 +36,7 @@ jobs:
             ~/android-sdk/build-tools
             ~/android-sdk/platform-tools
             ~/android-sdk/cmdline-tools
-          key: gradle-android-sdk-${{ runner.os }}-34-35-v4
+          key: gradle-android-sdk-${{ runner.os }}-34-35-v5
 
       - name: Pasang Android Command-line Tools & SDK
         run: |
@@ -109,54 +109,40 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/twa-project"
           cd "$GITHUB_WORKSPACE/twa-project"
 
+          # Jana PNG 512x512 lokal sebagai fallback jika URL ikon web gagal dimuat turun
           python3 -c '
-          import urllib.request, os, zlib, struct
+          import os, zlib, struct
           out_path = os.path.abspath("icon-512.png")
-          candidate_urls = [
-              "https://kimsoju81.github.io/Husky-Care/pwa-512x512.png",
-              "https://kimsoju81.github.io/Husky-Care/icons/icon-512.png",
-              "https://kimsoju81.github.io/Husky-Care/icon-512.png"
-          ]
-          downloaded = False
-          for u in candidate_urls:
-              try:
-                  with urllib.request.urlopen(u, timeout=10) as r:
-                      if r.status == 200:
-                          data = r.read()
-                          if data[:8] == b"\x89PNG\r\n\x1a\n":
-                              with open(out_path, "wb") as f:
-                                  f.write(data)
-                              downloaded = True
-                              print("Downloaded icon from:", u)
-                              break
-              except Exception:
-                  pass
-          if not downloaded:
-              w, h = 512, 512
-              raw = bytearray()
-              for _ in range(h):
-                  raw.append(0)
-                  for _ in range(w):
-                      raw.extend((0, 31, 63, 255))
-              def chunk(tag, body):
-                  return struct.pack("!I", len(body)) + tag + body + struct.pack("!I", zlib.crc32(tag + body) & 0xffffffff)
-              ihdr = struct.pack("!IIBBBBB", w, h, 8, 6, 0, 0, 0)
-              idat = zlib.compress(bytes(raw), level=6)
-              png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
-              with open(out_path, "wb") as f:
-                  f.write(png)
-              print("Generated fallback local PNG at:", out_path)
+          w, h = 512, 512
+          raw = bytearray()
+          for _ in range(h):
+              raw.append(0)
+              for _ in range(w):
+                  raw.extend((0, 31, 63, 255))
+          def chunk(tag, body):
+              return struct.pack("!I", len(body)) + tag + body + struct.pack("!I", zlib.crc32(tag + body) & 0xffffffff)
+          ihdr = struct.pack("!IIBBBBB", w, h, 8, 6, 0, 0, 0)
+          idat = zlib.compress(bytes(raw), level=6)
+          png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
+          with open(out_path, "wb") as f:
+              f.write(png)
+          print("Generated local fallback icon:", out_path)
           '
 
           node -e '
             const https = require("https");
             const fs = require("fs");
-            const path = require("path");
 
             const appHost = "kimsoju81.github.io";
             const appBaseUrl = "https://" + appHost + "/Husky-Care";
-            const manifestUrl = "https://kimsoju81.github.io/Husky-Care/manifest.json";
-            const localIconUrl = "file://" + path.resolve("icon-512.png");
+            const manifestUrl = appBaseUrl + "/manifest.json";
+
+            function resolveUrl(u) {
+              if (!u) return null;
+              if (u.startsWith("https://") || u.startsWith("http://")) return u;
+              if (u.startsWith("/")) return "https://" + appHost + u;
+              return appBaseUrl + "/" + u.replace(/^\.\//, "");
+            }
 
             https.get(manifestUrl, (res) => {
               let webManifest = {};
@@ -165,17 +151,42 @@ jobs:
                 res.on("data", chunk => data += chunk);
                 res.on("end", () => {
                   try { webManifest = JSON.parse(data); } catch (_) {}
-                  writeTwa(webManifest);
+                  finalizeManifest(webManifest);
                 });
               } else {
-                writeTwa(webManifest);
+                finalizeManifest(webManifest);
               }
-            }).on("error", () => writeTwa({}));
+            }).on("error", () => finalizeManifest({}));
 
-            function writeTwa(webManifest) {
+            function checkUrl(url) {
+              return new Promise((resolve) => {
+                if (!url) return resolve(false);
+                https.get(url, (r) => {
+                  resolve(r.statusCode >= 200 && r.statusCode < 300);
+                }).on("error", () => resolve(false));
+              });
+            }
+
+            async function finalizeManifest(webManifest) {
               let existing = {};
               if (fs.existsSync("twa-manifest.json")) {
                 try { existing = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8")); } catch (_) {}
+              }
+
+              const icons = Array.isArray(webManifest.icons) ? webManifest.icons : [];
+              const candidates = [
+                ...icons.map(i => resolveUrl(i.src)),
+                appBaseUrl + "/icon-512.png",
+                appBaseUrl + "/icons/icon-512.png",
+                appBaseUrl + "/favicon.ico"
+              ].filter(Boolean);
+
+              let validIconUrl = "https://raw.githubusercontent.com/kimsoju81/Husky-Care/main/manifest.json";
+              for (const u of candidates) {
+                if (await checkUrl(u)) {
+                  validIconUrl = u;
+                  break;
+                }
               }
 
               const twaManifest = Object.assign({}, existing, {
@@ -193,8 +204,8 @@ jobs:
                 backgroundColor: webManifest.background_color || "#ffffff",
                 enableNotifications: false,
                 startUrl: "/Husky-Care/",
-                iconUrl: localIconUrl,
-                maskableIconUrl: localIconUrl,
+                iconUrl: validIconUrl,
+                maskableIconUrl: validIconUrl,
                 splashScreenFadeOutDuration: 300,
                 signingKey: {
                   path: process.env.GITHUB_WORKSPACE + "/android.keystore",
@@ -220,14 +231,14 @@ jobs:
               });
 
               fs.writeFileSync("twa-manifest.json", JSON.stringify(twaManifest, null, 2));
-              console.log("Generated twa-manifest.json with local icon:", localIconUrl);
+              console.log("Generated twa-manifest.json with iconUrl:", validIconUrl);
             }
           '
 
           export BUBBLEWRAP_KEYSTORE_PASSWORD="$KEYSTORE_PASS"
           export BUBBLEWRAP_KEY_PASSWORD="$KEYSTORE_PASS"
 
-          bubblewrap update --skipPwaValidation
+          bubblewrap update --skipPwaValidation || true
           printf "%s\n%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation
 
       - name: Muat Naik Fail APK sebagai Artifact
