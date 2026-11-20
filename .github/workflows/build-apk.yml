@@ -25,16 +25,17 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
-      - name: Cache Android SDK
+      - name: Cache Gradle & Android SDK
         uses: actions/cache@v4
         with:
           path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
             ~/android-sdk/platforms
             ~/android-sdk/build-tools
             ~/android-sdk/platform-tools
-          key: android-sdk-${{ runner.os }}-34-35
+          key: gradle-android-sdk-${{ runner.os }}-34-35
 
       - name: Pasang Android Command-line Tools & SDK
         run: |
