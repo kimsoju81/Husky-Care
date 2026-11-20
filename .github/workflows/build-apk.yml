@@ -9,7 +9,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repositori
@@ -36,7 +36,7 @@ jobs:
             ~/android-sdk/build-tools
             ~/android-sdk/platform-tools
             ~/android-sdk/cmdline-tools
-          key: gradle-android-sdk-${{ runner.os }}-34-35-v5
+          key: gradle-android-sdk-${{ runner.os }}-34-35-v6
 
       - name: Pasang Android Command-line Tools & SDK
         run: |
@@ -103,31 +103,13 @@ jobs:
           mkdir -p "$HOME/.gradle"
           cat <<EOF > "$HOME/.gradle/gradle.properties"
           org.gradle.daemon=false
-          org.gradle.jvmargs=-Xmx2560m -XX:MaxMetaspaceSize=512m
+          org.gradle.parallel=true
+          org.gradle.caching=true
+          org.gradle.jvmargs=-Xmx3072m -XX:MaxMetaspaceSize=512m
           EOF
 
           mkdir -p "$GITHUB_WORKSPACE/twa-project"
           cd "$GITHUB_WORKSPACE/twa-project"
-
-          # Jana PNG 512x512 lokal sebagai fallback jika URL ikon web gagal dimuat turun
-          python3 -c '
-          import os, zlib, struct
-          out_path = os.path.abspath("icon-512.png")
-          w, h = 512, 512
-          raw = bytearray()
-          for _ in range(h):
-              raw.append(0)
-              for _ in range(w):
-                  raw.extend((0, 31, 63, 255))
-          def chunk(tag, body):
-              return struct.pack("!I", len(body)) + tag + body + struct.pack("!I", zlib.crc32(tag + body) & 0xffffffff)
-          ihdr = struct.pack("!IIBBBBB", w, h, 8, 6, 0, 0, 0)
-          idat = zlib.compress(bytes(raw), level=6)
-          png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
-          with open(out_path, "wb") as f:
-              f.write(png)
-          print("Generated local fallback icon:", out_path)
-          '
 
           node -e '
             const https = require("https");
