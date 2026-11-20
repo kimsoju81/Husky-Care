@@ -9,7 +9,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repositori
@@ -103,27 +103,62 @@ jobs:
           mkdir -p "$HOME/.gradle"
           cat <<EOF > "$HOME/.gradle/gradle.properties"
           org.gradle.daemon=false
-          org.gradle.parallel=true
-          org.gradle.caching=true
-          org.gradle.jvmargs=-Xmx3072m -XX:MaxMetaspaceSize=512m
+          org.gradle.jvmargs=-Xmx2560m -XX:MaxMetaspaceSize=512m
           EOF
 
           mkdir -p "$GITHUB_WORKSPACE/twa-project"
           cd "$GITHUB_WORKSPACE/twa-project"
 
+          # Jana PNG 512x512 yang sah dan jalankan HTTP server lokal sementara untuk MIME type image/png
+          python3 -c '
+          import os, zlib, struct
+          out_path = os.path.abspath("icon-512.png")
+          w, h = 512, 512
+          raw = bytearray()
+          for _ in range(h):
+              raw.append(0)
+              for _ in range(w):
+                  raw.extend((0, 31, 63, 255))
+          def chunk(tag, body):
+              return struct.pack("!I", len(body)) + tag + body + struct.pack("!I", zlib.crc32(tag + body) & 0xffffffff)
+          ihdr = struct.pack("!IIBBBBB", w, h, 8, 6, 0, 0, 0)
+          idat = zlib.compress(bytes(raw), level=6)
+          png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
+          with open(out_path, "wb") as f:
+              f.write(png)
+          print("Generated valid PNG at:", out_path)
+          '
+
+          python3 -m http.server 18080 --directory "$GITHUB_WORKSPACE/twa-project" >/dev/null 2>&1 &
+          SERVER_PID=$!
+          trap "kill $SERVER_PID 2>/dev/null || true" EXIT
+
           node -e '
             const https = require("https");
+            const http = require("http");
             const fs = require("fs");
 
             const appHost = "kimsoju81.github.io";
             const appBaseUrl = "https://" + appHost + "/Husky-Care";
             const manifestUrl = appBaseUrl + "/manifest.json";
+            const localPngUrl = "http://127.0.0.1:18080/icon-512.png";
 
             function resolveUrl(u) {
               if (!u) return null;
               if (u.startsWith("https://") || u.startsWith("http://")) return u;
               if (u.startsWith("/")) return "https://" + appHost + u;
               return appBaseUrl + "/" + u.replace(/^\.\//, "");
+            }
+
+            function checkImageUrl(url) {
+              return new Promise((resolve) => {
+                if (!url) return resolve(false);
+                const client = url.startsWith("http://") ? http : https;
+                client.get(url, (r) => {
+                  const ct = (r.headers["content-type"] || "").toLowerCase();
+                  resolve(r.statusCode >= 200 && r.statusCode < 300 && ct.startsWith("image/"));
+                }).on("error", () => resolve(false));
+              });
             }
 
             https.get(manifestUrl, (res) => {
@@ -140,15 +175,6 @@ jobs:
               }
             }).on("error", () => finalizeManifest({}));
 
-            function checkUrl(url) {
-              return new Promise((resolve) => {
-                if (!url) return resolve(false);
-                https.get(url, (r) => {
-                  resolve(r.statusCode >= 200 && r.statusCode < 300);
-                }).on("error", () => resolve(false));
-              });
-            }
-
             async function finalizeManifest(webManifest) {
               let existing = {};
               if (fs.existsSync("twa-manifest.json")) {
@@ -160,12 +186,12 @@ jobs:
                 ...icons.map(i => resolveUrl(i.src)),
                 appBaseUrl + "/icon-512.png",
                 appBaseUrl + "/icons/icon-512.png",
-                appBaseUrl + "/favicon.ico"
+                localPngUrl
               ].filter(Boolean);
 
-              let validIconUrl = "https://raw.githubusercontent.com/kimsoju81/Husky-Care/main/manifest.json";
+              let validIconUrl = localPngUrl;
               for (const u of candidates) {
-                if (await checkUrl(u)) {
+                if (await checkImageUrl(u)) {
                   validIconUrl = u;
                   break;
                 }
@@ -213,14 +239,16 @@ jobs:
               });
 
               fs.writeFileSync("twa-manifest.json", JSON.stringify(twaManifest, null, 2));
-              console.log("Generated twa-manifest.json with iconUrl:", validIconUrl);
+              console.log("Generated twa-manifest.json with image iconUrl:", validIconUrl);
             }
           '
 
           export BUBBLEWRAP_KEYSTORE_PASSWORD="$KEYSTORE_PASS"
           export BUBBLEWRAP_KEY_PASSWORD="$KEYSTORE_PASS"
 
-          bubblewrap update --skipPwaValidation || true
+          bubblewrap update --skipPwaValidation
+          kill $SERVER_PID 2>/dev/null || true
+
           printf "%s\n%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation
 
       - name: Muat Naik Fail APK sebagai Artifact
