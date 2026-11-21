@@ -1,4 +1,4 @@
-name: Bina Husky Care TWA APK
+name: Bina Husky Care Android APK
 
 on:
   workflow_dispatch:
@@ -9,14 +9,14 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repositori
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Sediakan Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -26,261 +26,150 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Cache Gradle & Android SDK
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            ~/android-sdk/platforms
-            ~/android-sdk/build-tools
-            ~/android-sdk/platform-tools
-            ~/android-sdk/cmdline-tools
-            ~/android-sdk/licenses
-          key: gradle-android-sdk-${{ runner.os }}-34-35-v11
-
       - name: Pasang Android Command-line Tools & SDK
         run: |
           set -e
           ANDROID_SDK_ROOT="$HOME/android-sdk"
           mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-
-          if [ ! -x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+          rm -f cmdline-tools.zip
+          if [ -d "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" ]; then
             rm -rf "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-            curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
-            unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
             mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-            rm -f cmdline-tools.zip
           fi
-
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
-            "platform-tools" \
-            "platforms;android-34" \
-            "platforms;android-35" \
-            "build-tools;34.0.0" \
-            "build-tools;35.0.0"
-
+          chmod -R +x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin"
+          (printf 'y\n%.0s' {1..50}) | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null 2>&1 || true
+          (printf 'y\n%.0s' {1..50}) | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
           echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
 
-      - name: Pasang Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
-
-      - name: Sediakan Keystore Tandatangan APK
+      - name: Jana Keystore Tandatangan APK Husky Care
         run: |
           set -e
           KEYSTORE_PASS="${{ secrets.HUSKYCARE_KEYSTORE_PASSWORD || 'huskycare123' }}"
           if [ -n "${{ secrets.HUSKYCARE_KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.HUSKYCARE_KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/android.keystore"
+            echo "${{ secrets.HUSKYCARE_KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/huskycare-android.keystore"
           else
-            keytool -genkeypair -v \
-              -keystore "$GITHUB_WORKSPACE/android.keystore" \
-              -alias huskycarekey \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass "$KEYSTORE_PASS" \
-              -keypass "$KEYSTORE_PASS" \
-              -dname "CN=Husky Care, OU=SYM Husky 150, O=Husky Care, L=Melaka, ST=Melaka, C=MY"
+            keytool -genkeypair -v -keystore "$GITHUB_WORKSPACE/huskycare-android.keystore" -alias huskycarekey -keyalg RSA -keysize 2048 -validity 10000 -storepass "$KEYSTORE_PASS" -keypass "$KEYSTORE_PASS" -dname "CN=Husky Care, OU=SYM Husky 150, O=Husky Care, L=Melaka, ST=Melaka, C=MY"
           fi
           echo "KEYSTORE_PASS=$KEYSTORE_PASS" >> "$GITHUB_ENV"
 
-      - name: Cipta konfigurasi Bubblewrap & Bina APK
+      - name: Bina Projek Android & APK Husky Care
         run: |
           set -e
-          SDK_DIR="$HOME/android-sdk"
-          JDK_DIR="${JAVA_HOME:-$(dirname $(dirname $(readlink -f $(which java))))}"
-
-          mkdir -p "$HOME/.bubblewrap"
-          cat <<EOF > "$HOME/.bubblewrap/config.json"
-          {
-            "jdkPath": "$JDK_DIR",
-            "androidSdkPath": "$SDK_DIR"
-          }
-          EOF
-
-          mkdir -p "$HOME/.gradle"
-          cat <<EOF > "$HOME/.gradle/gradle.properties"
-          org.gradle.daemon=false
-          org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m
-          org.gradle.console=plain
-          EOF
-
-          mkdir -p "$GITHUB_WORKSPACE/twa-project"
-          cd "$GITHUB_WORKSPACE/twa-project"
-
-          # Jana PNG 512x512 yang sah
-          python3 -c '
-          import os, zlib, struct
-          out_path = os.path.abspath("icon-512.png")
-          w, h = 512, 512
-          raw = bytearray()
-          for _ in range(h):
-              raw.append(0)
-              for _ in range(w):
-                  raw.extend((0, 31, 63, 255))
-          def chunk(tag, body):
-              return struct.pack("!I", len(body)) + tag + body + struct.pack("!I", zlib.crc32(tag + body) & 0xffffffff)
-          ihdr = struct.pack("!IIBBBBB", w, h, 8, 6, 0, 0, 0)
-          idat = zlib.compress(bytes(raw), level=6)
-          png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
-          with open(out_path, "wb") as f:
-              f.write(png)
-          print("Generated valid PNG at:", out_path)
-          '
+          mkdir -p "$GITHUB_WORKSPACE/huskycare-project/app/src/main/java/org/huskycare/app" "$GITHUB_WORKSPACE/huskycare-project/app/src/main/res/values"
+          cd "$GITHUB_WORKSPACE/huskycare-project"
+          export ANDROID_HOME="$HOME/android-sdk"
+          printf "sdk.dir=%s\n" "$ANDROID_HOME" > local.properties
+          printf "rootProject.name = 'HuskyCareApp'\ninclude ':app'\n" > settings.gradle
+          printf "buildscript {\n    repositories {\n        google()\n        mavenCentral()\n    }\n    dependencies {\n        classpath 'com.android.tools.build:gradle:8.1.4'\n    }\n}\n\nallprojects {\n    repositories {\n        google()\n        mavenCentral()\n    }\n}\n" > build.gradle
+          printf "plugins {\n    id 'com.android.application'\n}\n\nandroid {\n    namespace 'org.huskycare.app'\n    compileSdk 34\n\n    defaultConfig {\n        applicationId \"org.huskycare.app\"\n        minSdk 21\n        targetSdk 34\n        versionCode 1\n        versionName \"1.0.0\"\n    }\n\n    signingConfigs {\n        release {\n            storeFile file(\"%s/huskycare-android.keystore\")\n            storePassword \"%s\"\n            keyAlias \"huskycarekey\"\n            keyPassword \"%s\"\n        }\n    }\n\n    buildTypes {\n        release {\n            signingConfig signingConfigs.release\n            minifyEnabled false\n        }\n    }\n\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }\n}\n" "$GITHUB_WORKSPACE" "$KEYSTORE_PASS" "$KEYSTORE_PASS" > app/build.gradle
+          printf "<resources>\n    <string name=\"app_name\">Husky Care</string>\n</resources>\n" > app/src/main/res/values/strings.xml
 
           node -e '
-            const https = require("https");
-            const http = require("http");
             const fs = require("fs");
+            const path = require("path");
+            const zlib = require("zlib");
 
-            const appHost = "kimsoju81.github.io";
-            const appBaseUrl = "https://" + appHost + "/Husky-Care";
-            const manifestUrl = appBaseUrl + "/manifest.json";
-            const localPngUrl = "http://127.0.0.1:18080/icon-512.png";
-
-            function resolveUrl(u) {
-              if (!u) return null;
-              if (u.startsWith("https://") || u.startsWith("http://")) return u;
-              if (u.startsWith("/")) return "https://" + appHost + u;
-              return appBaseUrl + "/" + u.replace(/^\.\//, "");
-            }
-
-            function checkImageUrl(url) {
-              return new Promise((resolve) => {
-                if (!url) return resolve(false);
-                const client = url.startsWith("http://") ? http : https;
-                client.get(url, (r) => {
-                  const ct = (r.headers["content-type"] || "").toLowerCase();
-                  resolve(r.statusCode >= 200 && r.statusCode < 300 && ct.startsWith("image/"));
-                }).on("error", () => resolve(false));
-              });
-            }
-
-            https.get(manifestUrl, (res) => {
-              let webManifest = {};
-              if (res.statusCode === 200) {
-                let data = "";
-                res.on("data", chunk => data += chunk);
-                res.on("end", () => {
-                  try { webManifest = JSON.parse(data); } catch (_) {}
-                  finalizeManifest(webManifest);
-                });
-              } else {
-                finalizeManifest(webManifest);
-              }
-            }).on("error", () => finalizeManifest({}));
-
-            async function finalizeManifest(webManifest) {
-              let existing = {};
-              if (fs.existsSync("twa-manifest.json")) {
-                try { existing = JSON.parse(fs.readFileSync("twa-manifest.json", "utf8")); } catch (_) {}
-              }
-
-              const icons = Array.isArray(webManifest.icons) ? webManifest.icons : [];
-              const candidates = [
-                ...icons.map(i => resolveUrl(i.src)),
-                appBaseUrl + "/icon-512.png",
-                appBaseUrl + "/icons/icon-512.png",
-                localPngUrl
-              ].filter(Boolean);
-
-              let validIconUrl = localPngUrl;
-              for (const u of candidates) {
-                if (await checkImageUrl(u)) {
-                  validIconUrl = u;
-                  break;
+            function crc32(buf) {
+              let c = 0xffffffff;
+              for (let i = 0; i < buf.length; i++) {
+                c ^= buf[i];
+                for (let k = 0; k < 8; k++) {
+                  c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0);
                 }
               }
+              return (c ^ 0xffffffff) >>> 0;
+            }
 
-              const twaManifest = Object.assign({}, existing, {
-                packageId: "io.github.kimsoju81.huskycare.twa",
-                host: appHost,
-                name: webManifest.name || "Husky Care",
-                launcherName: webManifest.short_name || "Husky Care",
-                display: webManifest.display || "standalone",
-                themeColor: webManifest.theme_color || "#001F3F",
-                themeColorDark: webManifest.theme_color || "#001F3F",
-                navigationColor: webManifest.background_color || "#ffffff",
-                navigationColorDark: webManifest.background_color || "#000000",
-                navigationDividerColor: "#000000",
-                navigationDividerColorDark: "#000000",
-                backgroundColor: webManifest.background_color || "#ffffff",
-                enableNotifications: false,
-                startUrl: "/Husky-Care/",
-                iconUrl: validIconUrl,
-                maskableIconUrl: validIconUrl,
-                splashScreenFadeOutDuration: 300,
-                signingKey: {
-                  path: process.env.GITHUB_WORKSPACE + "/android.keystore",
-                  alias: "huskycarekey"
-                },
-                appVersionName: "1.0.0",
-                appVersionCode: 1,
-                shortcuts: [],
-                generatorApp: "bubblewrap-cli",
-                webManifestUrl: manifestUrl,
-                fallbackType: "customtabs",
-                features: {},
-                alphaDependencies: { enabled: false },
-                enableSiteSettingsShortcut: true,
-                isChromeOSOnly: false,
-                isMetaQuest: false,
-                fullScopeUrl: appBaseUrl + "/",
-                minSdkVersion: 21,
-                orientation: webManifest.orientation || "default",
-                fingerprints: existing.fingerprints || [],
-                additionalTrustedOrigins: [],
-                retainedHashes: existing.retainedHashes || []
-              });
+            function chunk(type, data) {
+              const len = Buffer.alloc(4);
+              len.writeUInt32BE(data.length, 0);
+              const typeBuf = Buffer.from(type, "ascii");
+              const crcBuf = Buffer.alloc(4);
+              crcBuf.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])), 0);
+              return Buffer.concat([len, typeBuf, data, crcBuf]);
+            }
 
-              fs.writeFileSync("twa-manifest.json", JSON.stringify(twaManifest, null, 2));
-              console.log("Generated twa-manifest.json with image iconUrl:", validIconUrl);
+            function makeHuskyCarePng(size) {
+              const raw = Buffer.alloc(size * (1 + size * 4));
+              for (let y = 0; y < size; y++) {
+                const rowStart = y * (1 + size * 4);
+                raw[rowStart] = 0;
+                for (let x = 0; x < size; x++) {
+                  const px = rowStart + 1 + x * 4;
+                  const nx = x / size;
+                  const ny = y / size;
+                  const dx = nx - 0.5;
+                  const dy = ny - 0.5;
+                  const inBadge = (dx * dx + dy * dy) <= 0.34 * 0.34;
+                  const inCrossV = inBadge && Math.abs(nx - 0.5) <= 0.07 && ny >= 0.30 && ny <= 0.70;
+                  const inCrossH = inBadge && Math.abs(ny - 0.5) <= 0.07 && nx >= 0.30 && nx <= 0.70;
+                  if (inCrossV || inCrossH) {
+                    raw[px] = 255;
+                    raw[px + 1] = 255;
+                    raw[px + 2] = 255;
+                    raw[px + 3] = 255;
+                  } else if (inBadge) {
+                    raw[px] = 30;
+                    raw[px + 1] = 58;
+                    raw[px + 2] = 138;
+                    raw[px + 3] = 255;
+                  } else {
+                    raw[px] = 0;
+                    raw[px + 1] = 31;
+                    raw[px + 2] = 63;
+                    raw[px + 3] = 255;
+                  }
+                }
+              }
+              const ihdr = Buffer.alloc(13);
+              ihdr.writeUInt32BE(size, 0);
+              ihdr.writeUInt32BE(size, 4);
+              ihdr[8] = 8;
+              ihdr[9] = 6;
+              ihdr[10] = 0;
+              ihdr[11] = 0;
+              ihdr[12] = 0;
+              return Buffer.concat([
+                Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+                chunk("IHDR", ihdr),
+                chunk("IDAT", zlib.deflateSync(raw)),
+                chunk("IEND", Buffer.alloc(0))
+              ]);
+            }
+
+            const sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192
+            };
+
+            for (const [folder, sz] of Object.entries(sizes)) {
+              const dir = path.join("app/src/main/res", folder);
+              fs.mkdirSync(dir, { recursive: true });
+              const png = makeHuskyCarePng(sz);
+              fs.writeFileSync(path.join(dir, "ic_launcher.png"), png);
+              fs.writeFileSync(path.join(dir, "ic_launcher_round.png"), png);
             }
           '
 
-          export BUBBLEWRAP_KEYSTORE_PASSWORD="$KEYSTORE_PASS"
-          export BUBBLEWRAP_KEY_PASSWORD="$KEYSTORE_PASS"
+          printf "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n    <uses-permission android:name=\"android.permission.INTERNET\" />\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />\n    <application\n        android:allowBackup=\"true\"\n        android:icon=\"@mipmap/ic_launcher\"\n        android:roundIcon=\"@mipmap/ic_launcher_round\"\n        android:label=\"@string/app_name\"\n        android:supportsRtl=\"true\"\n        android:usesCleartextTraffic=\"true\"\n        android:theme=\"@android:style/Theme.DeviceDefault.Light.NoActionBar\">\n        <activity android:name=\".MainActivity\" android:exported=\"true\" android:configChanges=\"orientation|screenSize|keyboardHidden\">\n            <intent-filter>\n                <action android:name=\"android.intent.action.MAIN\" />\n                <category android:name=\"android.intent.category.LAUNCHER\" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>\n" > app/src/main/AndroidManifest.xml
+          printf "package org.huskycare.app;\n\nimport android.app.Activity;\nimport android.graphics.Color;\nimport android.os.Bundle;\nimport android.webkit.WebChromeClient;\nimport android.webkit.WebSettings;\nimport android.webkit.WebView;\nimport android.webkit.WebViewClient;\n\npublic class MainActivity extends Activity {\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        WebView webView = new WebView(this);\n        webView.setBackgroundColor(Color.WHITE);\n        WebSettings settings = webView.getSettings();\n        settings.setJavaScriptEnabled(true);\n        settings.setDomStorageEnabled(true);\n        settings.setDatabaseEnabled(true);\n        settings.setLoadWithOverviewMode(true);\n        settings.setUseWideViewPort(true);\n        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);\n        webView.setWebChromeClient(new WebChromeClient());\n        webView.setWebViewClient(new WebViewClient());\n        setContentView(webView);\n        webView.loadUrl(\"https://kimsoju81.github.io/Husky-Care/\");\n    }\n}\n" > app/src/main/java/org/huskycare/app/MainActivity.java
+          rm -rf /opt/gradle/gradle-8.4 gradle.zip
+          mkdir -p /opt/gradle
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.4-bin.zip -o gradle.zip
+          unzip -q gradle.zip -d /opt/gradle
+          rm -f gradle.zip
+          chmod +x /opt/gradle/gradle-8.4/bin/gradle
+          /opt/gradle/gradle-8.4/bin/gradle assembleRelease --no-daemon
 
-          python3 -m http.server 18080 --directory "$GITHUB_WORKSPACE/twa-project" >/dev/null 2>&1 &
-          SERVER_PID=$!
-          trap "kill $SERVER_PID 2>/dev/null || true" EXIT
-
-          if [ ! -f "build.gradle" ] && [ ! -f "app/build.gradle" ]; then
-            echo "Menjana projek awal dengan bubblewrap init..."
-            printf "kimsoju81.github.io\n/Husky-Care/\n1.0.0\n1\n\n\n\n\n\n\n\n\n" | bubblewrap init --manifest="https://kimsoju81.github.io/Husky-Care/manifest.json" --skipPwaValidation || true
-          fi
-
-          echo "Menjalankan bubblewrap update..."
-          printf "1.0.0\n1.0.0\n1.0.0\n" | bubblewrap update --skipPwaValidation
-
-          kill $SERVER_PID 2>/dev/null || true
-
-          echo "Menjalankan bubblewrap build..."
-          if ! printf "%s\n%s\n%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation; then
-            echo "Bubblewrap build gagal pada semakan SDK; membina APK terus melalui Gradle..."
-            if [ -x "./gradlew" ]; then
-              chmod +x ./gradlew
-              ./gradlew assembleRelease --no-daemon
-              UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-              APKSIGNER=$(find "$SDK_DIR/build-tools" -name "apksigner" | sort -V | tail -n 1)
-              ZIPALIGN=$(find "$SDK_DIR/build-tools" -name "zipalign" | sort -V | tail -n 1)
-              if [ -n "$UNSIGNED_APK" ] && [ -n "$APKSIGNER" ] && [ -n "$ZIPALIGN" ]; then
-                ALIGNED_APK="app/build/outputs/apk/release/husky-care-aligned.apk"
-                SIGNED_APK="app/build/outputs/apk/release/husky-care-signed.apk"
-                "$ZIPALIGN" -f -p 4 "$UNSIGNED_APK" "$ALIGNED_APK"
-                "$APKSIGNER" sign --ks "$GITHUB_WORKSPACE/android.keystore" --ks-key-alias huskycarekey --ks-pass "pass:$KEYSTORE_PASS" --key-pass "pass:$KEYSTORE_PASS" --out "$SIGNED_APK" "$ALIGNED_APK"
-                echo "Berjaya menjana APK bertandatangan: $SIGNED_APK"
-              fi
-            else
-              exit 1
-            fi
-          fi
-
-      - name: Muat Naik Fail APK sebagai Artifact
-        uses: actions/upload-artifact@v4
+      - name: Muat Naik Fail APK Husky Care sebagai Artifact
+        uses: actions/upload-artifact@v5
         with:
-          name: Husky-Care-TWA-APK
-          path: twa-project/**/*.apk
+          name: Husky-Care-Android-APK
+          path: huskycare-project/**/*.apk
