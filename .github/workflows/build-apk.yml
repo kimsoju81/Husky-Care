@@ -37,7 +37,7 @@ jobs:
             ~/android-sdk/platform-tools
             ~/android-sdk/cmdline-tools
             ~/android-sdk/licenses
-          key: gradle-android-sdk-${{ runner.os }}-34-35-v10
+          key: gradle-android-sdk-${{ runner.os }}-34-35-v11
 
       - name: Pasang Android Command-line Tools & SDK
         run: |
@@ -64,9 +64,6 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
           echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-
-          echo "Semakan SDK:"
-          ls -la "$ANDROID_SDK_ROOT"
 
       - name: Pasang Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
@@ -103,7 +100,6 @@ jobs:
             "androidSdkPath": "$SDK_DIR"
           }
           EOF
-          cat "$HOME/.bubblewrap/config.json"
 
           mkdir -p "$HOME/.gradle"
           cat <<EOF > "$HOME/.gradle/gradle.properties"
@@ -263,7 +259,25 @@ jobs:
           kill $SERVER_PID 2>/dev/null || true
 
           echo "Menjalankan bubblewrap build..."
-          printf "%s\n%s\n%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation
+          if ! printf "%s\n%s\n%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation; then
+            echo "Bubblewrap build gagal pada semakan SDK; membina APK terus melalui Gradle..."
+            if [ -x "./gradlew" ]; then
+              chmod +x ./gradlew
+              ./gradlew assembleRelease --no-daemon
+              UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+              APKSIGNER=$(find "$SDK_DIR/build-tools" -name "apksigner" | sort -V | tail -n 1)
+              ZIPALIGN=$(find "$SDK_DIR/build-tools" -name "zipalign" | sort -V | tail -n 1)
+              if [ -n "$UNSIGNED_APK" ] && [ -n "$APKSIGNER" ] && [ -n "$ZIPALIGN" ]; then
+                ALIGNED_APK="app/build/outputs/apk/release/husky-care-aligned.apk"
+                SIGNED_APK="app/build/outputs/apk/release/husky-care-signed.apk"
+                "$ZIPALIGN" -f -p 4 "$UNSIGNED_APK" "$ALIGNED_APK"
+                "$APKSIGNER" sign --ks "$GITHUB_WORKSPACE/android.keystore" --ks-key-alias huskycarekey --ks-pass "pass:$KEYSTORE_PASS" --key-pass "pass:$KEYSTORE_PASS" --out "$SIGNED_APK" "$ALIGNED_APK"
+                echo "Berjaya menjana APK bertandatangan: $SIGNED_APK"
+              fi
+            else
+              exit 1
+            fi
+          fi
 
       - name: Muat Naik Fail APK sebagai Artifact
         uses: actions/upload-artifact@v4
