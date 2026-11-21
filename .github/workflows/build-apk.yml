@@ -9,7 +9,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 35
 
     steps:
       - name: Checkout repositori
@@ -36,7 +36,7 @@ jobs:
             ~/android-sdk/build-tools
             ~/android-sdk/platform-tools
             ~/android-sdk/cmdline-tools
-          key: gradle-android-sdk-${{ runner.os }}-34-35-v8
+          key: gradle-android-sdk-${{ runner.os }}-34-35-v9
 
       - name: Pasang Android Command-line Tools & SDK
         run: |
@@ -110,7 +110,6 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/twa-project"
           cd "$GITHUB_WORKSPACE/twa-project"
 
-          # Jana PNG 512x512 yang sah
           python3 -c '
           import os, zlib, struct
           out_path = os.path.abspath("icon-512.png")
@@ -246,13 +245,13 @@ jobs:
           python3 -m http.server 18080 --directory "$GITHUB_WORKSPACE/twa-project" >/dev/null 2>&1 &
           SERVER_PID=$!
 
-          echo "Menjalankan bubblewrap update..."
-          printf "1.0.0\n1.0.0\n1.0.0\n" | bubblewrap update --skipPwaValidation
+          echo "Menjalankan bubblewrap update (had 5 minit)..."
+          timeout 300s bubblewrap update --skipPwaValidation < /dev/null || true
 
           kill $SERVER_PID 2>/dev/null || true
 
-          echo "Menjalankan bubblewrap build..."
-          printf "%s\n%s\n%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation
+          echo "Menjalankan bubblewrap build (had 20 minit)..."
+          timeout 1200s bash -c 'printf "%s\n%s\n%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation'
 
       - name: Muat Naik Fail APK sebagai Artifact
         uses: actions/upload-artifact@v4
