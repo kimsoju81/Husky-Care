@@ -156,79 +156,82 @@ jobs:
               fs.writeFileSync(path.join(dir, "ic_launcher.png"), png);
               fs.writeFileSync(path.join(dir, "ic_launcher_round.png"), png);
             }
+
+            const javaCode = [
+              "package org.huskycare.app;",
+              "",
+              "import android.app.Activity;",
+              "import android.graphics.Color;",
+              "import android.os.Bundle;",
+              "import android.webkit.WebChromeClient;",
+              "import android.webkit.WebResourceError;",
+              "import android.webkit.WebResourceRequest;",
+              "import android.webkit.WebSettings;",
+              "import android.webkit.WebView;",
+              "import android.webkit.WebViewClient;",
+              "",
+              "public class MainActivity extends Activity {",
+              "    private WebView webView;",
+              "",
+              "    @Override",
+              "    protected void onCreate(Bundle savedInstanceState) {",
+              "        super.onCreate(savedInstanceState);",
+              "        webView = new WebView(this);",
+              "        webView.setBackgroundColor(Color.parseColor(\"#001F3F\"));",
+              "",
+              "        WebSettings settings = webView.getSettings();",
+              "        settings.setJavaScriptEnabled(true);",
+              "        settings.setDomStorageEnabled(true);",
+              "        settings.setDatabaseEnabled(true);",
+              "        settings.setAllowFileAccess(true);",
+              "        settings.setAllowContentAccess(true);",
+              "        settings.setLoadWithOverviewMode(true);",
+              "        settings.setUseWideViewPort(true);",
+              "        settings.setCacheMode(WebSettings.LOAD_DEFAULT);",
+              "        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);",
+              "",
+              "        webView.setWebChromeClient(new WebChromeClient());",
+              "        webView.setWebViewClient(new WebViewClient() {",
+              "            @Override",
+              "            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {",
+              "                view.loadUrl(request.getUrl().toString());",
+              "                return true;",
+              "            }",
+              "",
+              "            @Override",
+              "            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {",
+              "                super.onReceivedError(view, request, error);",
+              "                if (request != null && request.isForMainFrame()) {",
+              "                    String msg = \"<html><body style=\\\"background:#001F3F;color:#ffffff;font-family:Arial,sans-serif;padding:24px;\\\">\"",
+              "                        + \"<h3>Husky Care</h3>\"",
+              "                        + \"<p>Gagal memuatkan halaman. Sila semak sambungan internet.</p>\"",
+              "                        + \"<p style=\\\"font-size:12px;opacity:0.8;\\\">URL: https://kimsoju81.github.io/Husky-Care/</p>\"",
+              "                        + \"</body></html>\";",
+              "                    view.loadDataWithBaseURL(\"https://kimsoju81.github.io/Husky-Care/\", msg, \"text/html\", \"UTF-8\", null);",
+              "                }",
+              "            }",
+              "        });",
+              "",
+              "        setContentView(webView);",
+              "        webView.loadUrl(\"https://kimsoju81.github.io/Husky-Care/\");",
+              "    }",
+              "",
+              "    @Override",
+              "    public void onBackPressed() {",
+              "        if (webView != null && webView.canGoBack()) {",
+              "            webView.goBack();",
+              "        } else {",
+              "            super.onBackPressed();",
+              "        }",
+              "    }",
+              "}",
+              ""
+            ].join("\n");
+
+            fs.writeFileSync("app/src/main/java/org/huskycare/app/MainActivity.java", javaCode);
           '
 
           printf "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n    <uses-permission android:name=\"android.permission.INTERNET\" />\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />\n    <application\n        android:allowBackup=\"true\"\n        android:icon=\"@mipmap/ic_launcher\"\n        android:roundIcon=\"@mipmap/ic_launcher_round\"\n        android:label=\"@string/app_name\"\n        android:supportsRtl=\"true\"\n        android:usesCleartextTraffic=\"true\"\n        android:theme=\"@android:style/Theme.DeviceDefault.Light.NoActionBar\">\n        <activity android:name=\".MainActivity\" android:exported=\"true\" android:configChanges=\"orientation|screenSize|keyboardHidden\">\n            <intent-filter>\n                <action android:name=\"android.intent.action.MAIN\" />\n                <category android:name=\"android.intent.category.LAUNCHER\" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>\n" > app/src/main/AndroidManifest.xml
-
-          cat <<'EOF' > app/src/main/java/org/huskycare/app/MainActivity.java
-package org.huskycare.app;
-
-import android.app.Activity;
-import android.graphics.Color;
-import android.os.Bundle;
-import android.webkit.WebChromeClient;
-import android.webkit.WebResourceError;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-
-public class MainActivity extends Activity {
-    private WebView webView;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        webView = new WebView(this);
-        webView.setBackgroundColor(Color.parseColor("#001F3F"));
-
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setDatabaseEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
-        settings.setLoadWithOverviewMode(true);
-        settings.setUseWideViewPort(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-
-        webView.setWebChromeClient(new WebChromeClient());
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                view.loadUrl(request.getUrl().toString());
-                return true;
-            }
-
-            @Override
-            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                super.onReceivedError(view, request, error);
-                if (request != null && request.isForMainFrame()) {
-                    String msg = "<html><body style='background:#001F3F;color:#ffffff;font-family:Arial,sans-serif;padding:24px;'>"
-                        + "<h3>Husky Care</h3>"
-                        + "<p>Gagal memuatkan halaman. Sila semak sambungan internet.</p>"
-                        + "<p style='font-size:12px;opacity:0.8;'>URL: https://kimsoju81.github.io/Husky-Care/</p>"
-                        + "</body></html>";
-                    view.loadDataWithBaseURL("https://kimsoju81.github.io/Husky-Care/", msg, "text/html", "UTF-8", null);
-                }
-            }
-        });
-
-        setContentView(webView);
-        webView.loadUrl("https://kimsoju81.github.io/Husky-Care/");
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
-    }
-}
-EOF
 
           rm -rf /opt/gradle/gradle-8.4 gradle.zip
           mkdir -p /opt/gradle
