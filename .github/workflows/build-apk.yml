@@ -65,7 +65,7 @@ jobs:
           printf "sdk.dir=%s\n" "$ANDROID_HOME" > local.properties
           printf "rootProject.name = 'HuskyCareApp'\ninclude ':app'\n" > settings.gradle
           printf "buildscript {\n    repositories {\n        google()\n        mavenCentral()\n    }\n    dependencies {\n        classpath 'com.android.tools.build:gradle:8.1.4'\n    }\n}\n\nallprojects {\n    repositories {\n        google()\n        mavenCentral()\n    }\n}\n" > build.gradle
-          printf "plugins {\n    id 'com.android.application'\n}\n\nandroid {\n    namespace 'org.huskycare.app'\n    compileSdk 34\n\n    defaultConfig {\n        applicationId \"org.huskycare.app\"\n        minSdk 21\n        targetSdk 34\n        versionCode 2\n        versionName \"1.0.1\"\n    }\n\n    signingConfigs {\n        release {\n            storeFile file(\"%s/huskycare-android.keystore\")\n            storePassword \"%s\"\n            keyAlias \"huskycarekey\"\n            keyPassword \"%s\"\n        }\n    }\n\n    buildTypes {\n        release {\n            signingConfig signingConfigs.release\n            minifyEnabled false\n        }\n    }\n\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }\n}\n" "$GITHUB_WORKSPACE" "$KEYSTORE_PASS" "$KEYSTORE_PASS" > app/build.gradle
+          printf "plugins {\n    id 'com.android.application'\n}\n\nandroid {\n    namespace 'org.huskycare.app'\n    compileSdk 34\n\n    defaultConfig {\n        applicationId \"org.huskycare.app\"\n        minSdk 21\n        targetSdk 34\n        versionCode 3\n        versionName \"1.0.2\"\n    }\n\n    signingConfigs {\n        release {\n            storeFile file(\"%s/huskycare-android.keystore\")\n            storePassword \"%s\"\n            keyAlias \"huskycarekey\"\n            keyPassword \"%s\"\n        }\n    }\n\n    buildTypes {\n        release {\n            signingConfig signingConfigs.release\n            minifyEnabled false\n        }\n    }\n\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }\n}\n" "$GITHUB_WORKSPACE" "$KEYSTORE_PASS" "$KEYSTORE_PASS" > app/build.gradle
           printf "<resources>\n    <string name=\"app_name\">Husky Care</string>\n</resources>\n" > app/src/main/res/values/strings.xml
 
           node -e '
@@ -187,31 +187,34 @@ jobs:
               "        settings.setAllowContentAccess(true);",
               "        settings.setLoadWithOverviewMode(true);",
               "        settings.setUseWideViewPort(true);",
-              "        settings.setCacheMode(WebSettings.LOAD_DEFAULT);",
+              "        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);",
               "        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);",
               "",
               "        webView.setWebChromeClient(new WebChromeClient());",
               "        webView.setWebViewClient(new WebViewClient() {",
               "            @Override",
               "            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {",
-              "                view.loadUrl(request.getUrl().toString());",
-              "                return true;",
+              "                return false;",
               "            }",
               "",
               "            @Override",
               "            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {",
               "                super.onReceivedError(view, request, error);",
-              "                if (request != null && request.isForMainFrame()) {",
-              "                    String msg = \"<html><body style=\\\"background:#001F3F;color:#ffffff;font-family:Arial,sans-serif;padding:24px;\\\">\"",
-              "                        + \"<h3>Husky Care</h3>\"",
-              "                        + \"<p>Gagal memuatkan halaman. Sila semak sambungan internet.</p>\"",
-              "                        + \"<p style=\\\"font-size:12px;opacity:0.8;\\\">URL: https://kimsoju81.github.io/Husky-Care/</p>\"",
-              "                        + \"</body></html>\";",
-              "                    view.loadDataWithBaseURL(\"https://kimsoju81.github.io/Husky-Care/\", msg, \"text/html\", \"UTF-8\", null);",
+              "                if (request != null && request.isForMainFrame() && error != null) {",
+              "                    int code = error.getErrorCode();",
+              "                    if (code == WebViewClient.ERROR_HOST_LOOKUP || code == WebViewClient.ERROR_CONNECT || code == WebViewClient.ERROR_TIMEOUT) {",
+              "                        String msg = \"<html><body style=\\\"background:#001F3F;color:#ffffff;font-family:Arial,sans-serif;padding:24px;\\\">\"",
+              "                            + \"<h3>Husky Care</h3>\"",
+              "                            + \"<p>Gagal memuatkan halaman. Sila semak sambungan internet.</p>\"",
+              "                            + \"<p style=\\\"font-size:12px;opacity:0.8;\\\">URL: https://kimsoju81.github.io/Husky-Care/</p>\"",
+              "                            + \"</body></html>\";",
+              "                        view.loadDataWithBaseURL(\"https://kimsoju81.github.io/Husky-Care/\", msg, \"text/html\", \"UTF-8\", null);",
+              "                    }",
               "                }",
               "            }",
               "        });",
               "",
+              "        webView.clearCache(true);",
               "        setContentView(webView);",
               "        webView.loadUrl(\"https://kimsoju81.github.io/Husky-Care/\");",
               "    }",
@@ -247,12 +250,12 @@ jobs:
             echo "Ralat: Fail APK release tidak dijumpai atau kosong."
             exit 1
           fi
-          cp "$APK_SRC" "$GITHUB_WORKSPACE/dist-apk/Husky-Care-v1.0.1.apk"
-          ls -lh "$GITHUB_WORKSPACE/dist-apk/Husky-Care-v1.0.1.apk"
+          cp "$APK_SRC" "$GITHUB_WORKSPACE/dist-apk/Husky-Care-v1.0.2.apk"
+          ls -lh "$GITHUB_WORKSPACE/dist-apk/Husky-Care-v1.0.2.apk"
 
       - name: Muat Naik Fail APK Husky Care sebagai Artifact
         uses: actions/upload-artifact@v5
         with:
           name: Husky-Care-Android-APK
-          path: dist-apk/Husky-Care-v1.0.1.apk
+          path: dist-apk/Husky-Care-v1.0.2.apk
           if-no-files-found: error
