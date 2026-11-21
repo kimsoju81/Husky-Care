@@ -168,8 +168,18 @@ jobs:
           chmod +x /opt/gradle/gradle-8.4/bin/gradle
           /opt/gradle/gradle-8.4/bin/gradle assembleRelease --no-daemon
 
+          mkdir -p "$GITHUB_WORKSPACE/dist-apk"
+          APK_SRC=$(find "$GITHUB_WORKSPACE/huskycare-project/app/build/outputs/apk/release" -name "*.apk" -type f | head -n 1)
+          if [ -z "$APK_SRC" ] || [ ! -s "$APK_SRC" ]; then
+            echo "Ralat: Fail APK release tidak dijumpai atau kosong."
+            exit 1
+          fi
+          cp "$APK_SRC" "$GITHUB_WORKSPACE/dist-apk/Husky-Care-v1.0.0.apk"
+          ls -lh "$GITHUB_WORKSPACE/dist-apk/Husky-Care-v1.0.0.apk"
+
       - name: Muat Naik Fail APK Husky Care sebagai Artifact
         uses: actions/upload-artifact@v5
         with:
           name: Husky-Care-Android-APK
-          path: huskycare-project/**/*.apk
+          path: dist-apk/Husky-Care-v1.0.0.apk
+          if-no-files-found: error
