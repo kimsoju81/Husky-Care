@@ -1,41 +1,233 @@
 {
-  "id": "./index.html",
-  "name": "Sym Husky Care",
-  "short_name": "HuskyCare",
-  "description": "Sistem Penjagaan, Rekod Penyelenggaraan Berkala & Panduan Komprehensif Pemilik SYM Husky 150 Malaysia.",
-  "start_url": "./index.html",
-  "scope": "./",
-  "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#efece1",
-  "theme_color": "#0f1c30",
+  "id": "/",
+  "name": "Aplikasi Penjagaan SYM Husky — SYM Husky Care App",
+  "short_name": "SYM Husky",
+  "description": "Sistem Penjagaan, Rekod Penyelenggaraan Berkala, Diagnosis OBD-II ELM327 & Panduan Komprehensif Pemilik SYM Husky 150 Malaysia.",
   "lang": "ms",
   "dir": "ltr",
-  "categories": ["utilities", "productivity", "lifestyle"],
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "tabbed",
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "tab_strip": {
+    "home_tab": {
+      "scope_patterns": [
+        {
+          "pathname": "/"
+        }
+      ]
+    },
+    "new_tab_button": {
+      "url": "/?tab=jadual"
+    }
+  },
+  "orientation": "any",
+  "theme_color": "#020617",
+  "background_color": "#020617",
+  "categories": [
+    "auto",
+    "utilities",
+    "lifestyle",
+    "productivity"
+  ],
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "icons": [
     {
-      "src": "./pwa-192x192.png",
+      "src": "/pwa-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./pwa-512x512.png",
+      "src": "/pwa-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./pwa-maskable-192x192.png",
-      "sizes": "192x192",
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "./pwa-maskable-512x512.png",
-      "sizes": "512x512",
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/screenshot-wide.png",
+      "sizes": "1280x720",
       "type": "image/png",
-      "purpose": "maskable"
+      "form_factor": "wide",
+      "label": "Paparan Desktop SYM Husky Care App — Jadual Selenggara & Diagnosis OBD-II"
+    },
+    {
+      "src": "/screenshots/screenshot-narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Paparan Mudah Alih SYM Husky Care App — 8 Modul Penjagaan Pemilik"
+    }
+  ],
+  "scope_extensions": [
+    {
+      "origin": "https://ais-pre-wm2ckccgvl4o672mstyscd-91300137923.asia-southeast1.run.app"
+    },
+    {
+      "origin": "https://ais-dev-wm2ckccgvl4o672mstyscd-91300137923.asia-southeast1.run.app"
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.ovz.carscanner",
+      "id": "com.ovz.carscanner"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/car-scanner-elm-obd2/id1259933623"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": [
+      "focus-existing",
+      "auto"
+    ]
+  },
+  "file_handlers": [
+    {
+      "action": "/?tab=jadual&action=import",
+      "name": "Rekod Penyelenggaraan SYM Husky",
+      "accept": {
+        "text/csv": [
+          ".csv"
+        ],
+        "application/json": [
+          ".json"
+        ]
+      },
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "launch_type": "single-client"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+symhusky",
+      "url": "/?protocol=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/?tab=jadual&action=share",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "edge_side_panel": {
+    "preferred_width": 420
+  },
+  "note_taking": {
+    "new_note_url": "/?tab=jadual&action=new-note"
+  },
+  "widgets": [
+    {
+      "name": "Peringatan Servis SYM Husky",
+      "short_name": "Servis Husky",
+      "description": "Ringkasan jadual servis berkala, spesifikasi bateri YTZ10S dan status OBD-II SYM Husky 150.",
+      "tag": "sym-husky-maintenance-widget",
+      "ms_ac_template": "/widgets/husky-widget-template.json",
+      "data": "/widgets/husky-widget-data.json",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "/screenshots/widget-preview.png",
+          "sizes": "600x360",
+          "type": "image/png",
+          "label": "Pratonton Widget Peringatan Servis SYM Husky"
+        }
+      ],
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "auth": false,
+      "update": 86400
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Jadual Selenggara",
+      "short_name": "Jadual",
+      "description": "Buka rekod penyelenggaraan dan jadual servis berkala",
+      "url": "/?tab=jadual",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Kod OBD-II ELM327",
+      "short_name": "Kod OBD",
+      "description": "Carian kod ralat ECU Euro 5 dan konsol Car Scanner",
+      "url": "/?tab=obd",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Bateri & Fius",
+      "short_name": "Bateri",
+      "description": "Semak voltan bateri YTZ10S dan rajah kotak fius",
+      "url": "/?tab=bateri",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Catatan Servis Baharu",
+      "short_name": "Nota Baru",
+      "description": "Tambah rekod penyelenggaraan baharu dengan pantas",
+      "url": "/?tab=jadual&action=new-note",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
