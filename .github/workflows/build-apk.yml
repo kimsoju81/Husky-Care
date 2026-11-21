@@ -9,7 +9,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repositori
@@ -36,7 +36,7 @@ jobs:
             ~/android-sdk/build-tools
             ~/android-sdk/platform-tools
             ~/android-sdk/cmdline-tools
-          key: gradle-android-sdk-${{ runner.os }}-34-35-v7
+          key: gradle-android-sdk-${{ runner.os }}-34-35-v8
 
       - name: Pasang Android Command-line Tools & SDK
         run: |
@@ -103,13 +103,14 @@ jobs:
           mkdir -p "$HOME/.gradle"
           cat <<EOF > "$HOME/.gradle/gradle.properties"
           org.gradle.daemon=false
-          org.gradle.jvmargs=-Xmx2560m -XX:MaxMetaspaceSize=512m
+          org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m
+          org.gradle.console=plain
           EOF
 
           mkdir -p "$GITHUB_WORKSPACE/twa-project"
           cd "$GITHUB_WORKSPACE/twa-project"
 
-          # Jana PNG 512x512 yang sah dan jalankan HTTP server lokal sementara untuk MIME type image/png
+          # Jana PNG 512x512 yang sah
           python3 -c '
           import os, zlib, struct
           out_path = os.path.abspath("icon-512.png")
@@ -128,10 +129,6 @@ jobs:
               f.write(png)
           print("Generated valid PNG at:", out_path)
           '
-
-          python3 -m http.server 18080 --directory "$GITHUB_WORKSPACE/twa-project" >/dev/null 2>&1 &
-          SERVER_PID=$!
-          trap "kill $SERVER_PID 2>/dev/null || true" EXIT
 
           node -e '
             const https = require("https");
@@ -246,9 +243,15 @@ jobs:
           export BUBBLEWRAP_KEYSTORE_PASSWORD="$KEYSTORE_PASS"
           export BUBBLEWRAP_KEY_PASSWORD="$KEYSTORE_PASS"
 
+          python3 -m http.server 18080 --directory "$GITHUB_WORKSPACE/twa-project" >/dev/null 2>&1 &
+          SERVER_PID=$!
+
+          echo "Menjalankan bubblewrap update..."
           printf "1.0.0\n1.0.0\n1.0.0\n" | bubblewrap update --skipPwaValidation
+
           kill $SERVER_PID 2>/dev/null || true
 
+          echo "Menjalankan bubblewrap build..."
           printf "%s\n%s\n%s\n%s\n" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" "$KEYSTORE_PASS" | bubblewrap build --skipPwaValidation
 
       - name: Muat Naik Fail APK sebagai Artifact
