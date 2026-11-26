@@ -27,8 +27,8 @@
     }
   },
   "orientation": "any",
-  "theme_color": "#020617",
-  "background_color": "#020617",
+  "theme_color": "#FAF7FF",
+  "background_color": "#FAF7FF",
   "categories": [
     "auto",
     "utilities",
@@ -80,10 +80,12 @@
   ],
   "scope_extensions": [
     {
-      "origin": "https://ais-pre-wm2ckccgvl4o672mstyscd-91300137923.asia-southeast1.run.app"
+      "type": "origin",
+      "origin": "https://ais-pre-fvfpqqqnjcoksrilfl4ugo-771945971971.asia-east1.run.app"
     },
     {
-      "origin": "https://ais-dev-wm2ckccgvl4o672mstyscd-91300137923.asia-southeast1.run.app"
+      "type": "origin",
+      "origin": "https://ais-dev-fvfpqqqnjcoksrilfl4ugo-771945971971.asia-east1.run.app"
     }
   ],
   "prefer_related_applications": false,
@@ -95,7 +97,8 @@
     },
     {
       "platform": "itunes",
-      "url": "https://apps.apple.com/app/car-scanner-elm-obd2/id1259933623"
+      "url": "https://apps.apple.com/app/car-scanner-elm-obd2/id1259933623",
+      "id": "1259933623"
     }
   ],
   "launch_handler": {
