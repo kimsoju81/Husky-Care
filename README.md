@@ -1,67 +1,136 @@
-# Husky-Care
-All-in-one web app and maintenance companion for SYM Husky 150 owners. Features monthly autosaving service logs, OBD-II DTC scanner terminal, battery diagnostics, TFT meter guide, and curated DIY upgrade tutorials.
-# 🛵 SYM Husky 150 Companion Web App
+# Aplikasi Penjagaan SYM Husky — SYM Husky Care App
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20Mobile--Responsive-blue.svg)](#)
-[![Built with TailwindCSS](https://img.shields.io/badge/UI-Tailwind%20CSS-38B2AC.svg)](https://tailwindcss.com/)
-
-Aplikasi web setempat (*one-stop companion app*) yang direka khas untuk pemilik dan komuniti skuter **SYM Husky 150**. Menggabungkan jadual selenggara digital berserta fungsi simpanan automatik (*autosave*), pangkalan data kod diagnostik OBD-II, konsol ELM327, panduan panel meter TFT, serta katalog panduan DIY penjimatan kos.
+Aplikasi web progresif (**PWA**) yang dibangunkan khusus untuk pemilik skuter kembara **SYM Husky ADV 150 (Euro 4 / Euro 5)** di Malaysia. Aplikasi ini menyediakan log penyelenggaraan berkala automatik, panduan teknikal bateri & kotak fius, rujukan panel meter TFT, kamus kod kerosakan **OBD-II ELM327**, pengira beban elektrik aksesori, panduan penyelesaian masalah lazim, kalkulator kos servis, dan senarai semak konvoi komuniti.
 
 ---
 
-## 🌟 Ciri-Ciri Utama (Key Features)
+## Ciri Utama (8 Modul)
 
-### 1. 📋 Repair & Maintenance Sheet (Autosave Mengikut Bulan & Tahun)
-* **Log Rekod Servis Berkala:** Menyimpan rekod jarak perbatuan (*mileage*), tarikh, butiran komponen, keterangan kerosakan, dan tandatangan mekanik[span_0](start_span)[span_0](end_span).
-* **Simpanan Tempatan Automatik (*Autosave*):** Disimpan terus ke `localStorage` pelayar mengikut tetapan bulan dan tahun (`YYYY-MM`) tanpa risiko kehilangan data.
-* **Jadual Servis Berkala Rasmi:** Paparan matriks selenggara lengkap 300 km hingga 12,000 km berasaskan manual kilang berserta kod status (I, C, R, L).
+1. **Jadual Selenggara (`jadual`)**
+   - *Repair & Maintenance Record Sheet* dengan fungsi *autosave* mengikut bulan & tahun (`localStorage`).
+   - Paparan gabungan semua rekod sejarah servis dari awal hingga terkini.
+   - Eksport rekod ke **CSV**, **Word (`.docx`)**, dan **Pratonton Cetak / PDF** A4.
+   - Jadual servis berkala rasmi SYM Husky (300 KM, 1,000 KM, 3,000 KM, 6,000 KM, 12,000 KM) dengan penapis kod (`I`, `C`, `R`, `L`).
 
-### 2. 🔋 Diagnostik Bateri & Sistem Fius
-* **Panduan Voltan Masa Nyata:** Status bacaan voltan rehat (12.6V–12.8V), mod siap siaga sistem *Keyless* (12.2V–12.4V), amaran bateri lemah, dan paras voltan pengecasan normal semasa menunggang (13.8V–14.8V).
-* **Tips Motosikal Terbiar:** Prosedur perlindungan bateri YTZ10S untuk tempoh 3 hari, 7 hari (cabut terminal negatif), dan 30 hari (tangki penuh & *center stand*).
-* **Kaedah Jumper & Cas DIY:** 3 tatacara *jump start* selamat (Powerbank 12V, motosikal lain, dan bateri kereta) serta langkah pengecasan pintar di rumah.
+2. **Bateri & Kotak Fius (`bateri`)**
+   - Simulasi bacaan voltan rehat (*resting*) dan pengecasan (*charging*) bateri **YTZ10S**.
+   - Rajah interaktif susunan fius dan spesifikasi ampere setiap litar.
 
-### 3. ⏱️ Panduan Panel Meter TFT & Kokpit
-* **Kawalan Butang "M" & "S":** Tatacara menukar unit kelajuan (KM/H $\leftrightarrow$ MP/H) dan tetapan jam digital.
-* **Pengurusan Jarak (Mileage):** Cara *reset* Single Mileage (Trip) dan Oil Mileage (penunjuk servis minyak enjin).
-* **Kawalan Traksi (TCS):** Panduan menghidupkan atau mematikan sistem TCS pada kelajuan bawah 5 km/j.
+3. **Panel Meter (`meter`)**
+   - Panduan interaktif ikon amaran panel meter TFT dan fungsi butang `M` / `S` (jam, tripmeter, penunjuk servis minyak enjin).
 
-### 4. 💻 Pangkalan Data Kod OBD-II & Simulator ELM327
-* **Buletin Teknikal Rasmi (IB: 419):** Senarai lengkap kod ralat P-Codes (Euro 4 / Euro 5) meliputi sistem pendikit (TPS), penderia O2, suhu cecair penyejuk (ECT), dan suis keselamatan tongkat sisi.
-* **Carian Pantas (Live Filter):** Cari kod DTC atau nama komponen dengan serta-merta.
-* **Konsol Diagnostik ELM327:** Simulator pembacaan data ECU secara langsung (*Live RPM, Coolant Temp, Voltan, MIL status*) serta integrasi pautan ke perisian **Car Scanner ELM OBD2**.
+4. **Kod OBD-II & Konsol ELM327 (`obd`)**
+   - Pangkalan data kod ralat ECU Euro 4 / Euro 5 dan kod kelipan SYM (*Flash Codes*).
+   - Simulator konsol **ELM327** serta sokongan kebenaran **Web Bluetooth** dan **Geolocation (GPS)** untuk sambungan pengimbas OBD-II.
 
-### 5. 🛠️ 10 Masalah Biasa (Common Issues & Fixes)
-* Panduan mengatasi isu sensor O2 basah ketika hujan lebat, *throttle body* kotor, lampu amaran TCS berkelip, gegaran *CVT judder*, bunyi dengung pam petrol, dan starter relay melekat.
+5. **Aksesori & Beban Watt (`aksesori`)**
+   - Katalog naik taraf aksesori popular dan kalkulator beban watt untuk lampu *spotlight*, pengecas USB, dan TPMS.
 
-### 6. 💰 Kos Selenggara & Panduan Jimat Upah (DIY)
-* **Anggaran Kos Rutin:** Kos pasaran alat ganti seperti minyak enjin 10W-30, minyak transmisi 85W-140, bateri YTZ10S, dan tali sawat CVT.
-* **Panduan DIY Mengikut Tahap:** Panduan bergambar/langkah demi langkah bagi pemasangan filem tinted, penapis udara, *monorack*, *crash bar*, dan pendawaian lampu sorot (Spotlight) menggunakan geganti 4-pin (Relay) berserta anggaran penjimatan upah sehingga **RM165 – RM335+**.
+6. **Masalah Biasa (`masalah`)**
+   - Senarai isu lazim pemilik SYM Husky beserta punca dan langkah penyelesaian pantas.
 
-### 7. 🛒 Katalog Aksesori & Naik Taraf
-* Senarai aksesori khusus SYM Husky 150 dibahagikan mengikut kategori (Perlindungan, Utiliti, Prestasi, Pencahayaan, dan Kosmetik) lengkap dengan pautan terus ke Shopee dan video rujukan TikTok.
+7. **Kos Selenggara (`kos`)**
+   - Kalkulator anggaran kos alat ganti & upah mengikut jarak perbatuan (*1k, 5k, 6k, 12k*) dengan butang pindah terus ke rekod penyelenggaraan.
+
+8. **Grup Husky (`grup`)**
+   - Senarai semak pemeriksaan pra-tunggangan (*pre-ride checklist*) dan perkongsian jemputan komuniti.
 
 ---
 
-## 🛠️ Spesifikasi Pantas SYM Husky 150
+## Keupayaan PWA & Spesifikasi `manifest.json`
 
-| Parameter | Spesifikasi Disyorkan |
+Aplikasi ini dilengkapi sokongan penuh piawaian **Progressive Web App (PWA)** moden melalui `public/manifest.json`, `public/sw.js`, dan `src/utils/pwa.ts`:
+
+| Ahli Manifest / API | Fungsi & Pelaksanaan dalam Aplikasi |
 | :--- | :--- |
-| **Bahan Api** | Petrol tanpa plumbum RON95 ke atas (Oktana 90+) |
-| **Minyak Enjin** | SL/CF SAE 10W-30 (1.05L total / 1.0L servis biasa) |
-| **Minyak Gearbox** | SAE 85W-140 (100cc / 100ml) |
-| **Model Bateri** | YTZ10S (Gel / Maintenance-Free) |
-| **Konfigurasi Fius** | 25A + (20A × 2) + (15A × 3) |
-| **Kapasiti Tangki** | 15 Liter |
+| **`screenshots`** | Tangkapan skrin `wide` (`1280x720`) dan `narrow` (`720x1280`) untuk paparan pemasangan *Rich Install UI*. |
+| **`scope_extensions`** | Membenarkan domain aplikasi tambahan kekal dalam skop PWA (`type: "origin"`) dengan fail pengesahan `public/.well-known/web-app-origin-association`. |
+| **`related_applications`** | Memautkan aplikasi pendamping **Car Scanner ELM OBD2** di Google Play Store dan Apple App Store (`prefer_related_applications: false`). |
+| **`iarc_rating_id`** | ID penarafan umur rasmi International Age Rating Coalition (`e84b072d-71b3-4d3e-86ae-31a8ce4e53b7`). |
+| **`file_handlers`** | Membolehkan fail rekod `.csv` dan `.json` dibuka terus ke modul Jadual Selenggara melalui `window.launchQueue`. |
+| **`launch_handler`** | Menggunakan `client_mode: ["focus-existing", "auto"]` untuk memfokuskan tetingkap sedia ada tanpa membuka salinan pendua. |
+| **`protocol_handlers`** | Mendaftarkan skema protokol tersuai `web+symhusky://` (contoh: `web+symhusky://obd/P0130`) untuk navigasi terus ke modul atau kod ralat. |
+| **`share_target`** | Menerima teks, tajuk, atau pautan yang dikongsi dari aplikasi lain terus ke log penyelenggaraan (`/?tab=jadual&action=share`). |
+| **`widgets`** | Menyokong **Windows Adaptive Card Widget** (`public/widgets/husky-widget-template.json` & `husky-widget-data.json`) berserta kitaran hayat `widgetinstall`, `widgetresume`, dan `widgetclick` dalam Service Worker. |
+| **`edge_side_panel`** | Menyokong paparan bar sisi Microsoft Edge dengan lebar pilihan `420px`. |
+| **`display_override` (`tabbed`)** | Menyokong mod paparan berbilang tab (`tabbed`, `window-controls-overlay`, `standalone`, `minimal-ui`) bersama konfigurasi `tab_strip`. |
+| **`note_taking`** | Membolehkan sistem operasi melancarkan penciptaan catatan servis baharu secara terus melalui `/?tab=jadual&action=new-note`. |
+| **Background Sync API** | Mendaftarkan tag `sym-husky-sync-records` setiap kali rekod atau profil disimpan supaya penyegerakan diselesaikan apabila sambungan internet kembali stabil. |
+| **Periodic Background Sync API** | Mendaftarkan tag `sym-husky-periodic-check` (selang 24 jam) bagi mengemas kini data widget dan semakan berkala di latar belakang. |
+| **Web Push Notifications API** | Mengendalikan acara `push` dan `notificationclick` dalam `public/sw.js` untuk memaparkan peringatan servis berkala dan membuka terus modul berkaitan. |
 
 ---
 
-## 🚀 Pemasangan & Penggunaan (Getting Started)
+## Struktur Direktori Utama
 
-Aplikasi ini dibina sebagai aplikasi web satu halaman (*Single Page Application*) tanpa memerlukan pemasangan pelayan (*server-less*).
+```text
+├── public/
+│   ├── .well-known/
+│   │   └── web-app-origin-association   # Pengesahan asal bagi scope_extensions
+│   ├── screenshots/                     # Tangkapan skrin wide, narrow & widget
+│   ├── widgets/                         # Templat & data Adaptive Card Windows
+│   ├── manifest.json                    # Konfigurasi lengkap PWA Manifest
+│   ├── sw.js                            # Service Worker (Cache, Sync, Push, Widgets)
+│   ├── pwa-192x192.png                  # Ikon PWA 192x192
+│   ├── pwa-512x512.png                  # Ikon PWA 512x512
+│   ├── pwa-maskable-512x512.png         # Ikon boleh topeng (maskable) dengan zon selamat
+│   └── apple-touch-icon.png             # Ikon iOS Safari 180x180
+├── src/
+│   ├── components/
+│   │   ├── OfflineIndicator.tsx         # Penunjuk status luar talian
+│   │   ├── PWAInstallButton.tsx         # Butang pasang PWA & panduan iOS
+│   │   └── RecordPrintPreviewModal.tsx  # Pratonton cetakan A4 & eksport
+│   ├── data/
+│   │   └── huskyData.ts                 # Data jadual, kod OBD, fius & kos
+│   ├── hooks/
+│   │   ├── useOnlineStatus.ts           # Pengesan status rangkaian
+│   │   └── usePWAInstall.ts             # Pengendali acara beforeinstallprompt
+│   ├── modules/                         # 8 komponen modul utama aplikasi
+│   ├── utils/
+│   │   ├── pwa.ts                       # Utiliti SW, Background Sync, Periodic Sync & Push
+│   │   └── recordExport.ts              # Penjana dokumen Word (.docx)
+│   ├── App.tsx                          # Pengurusan keadaan & pengendali laluan PWA
+│   └── main.tsx                         # Titik masuk aplikasi & pendaftaran SW
+├── index.html                           # Meta tag PWA, iOS & manifest link
+└── package.json                         # Skrip pembangunan & binaan Vite
+```
 
-### Menjalankan Secara Tempatan (Local):
-1. Klon repositori ini ke komputer anda:
+---
+
+## Pemasangan & Pembangunan Setempat
+
+### Prasyarat
+- **Node.js** versi 20+ (atau Bun)
+
+### Langkah Menjalankan Aplikasi
+
+1. **Pasang kebergantungan:**
    ```bash
-   git clone [https://github.com/kimsoju81/sym-husky-care.git](https://github.com/kimsoju81/sym-husky-care.git)
+   npm install
+   ```
+
+2. **Mulakan pelayan pembangunan (port 3000):**
+   ```bash
+   npm run dev
+   ```
+
+3. **Semak ralat TypeScript:**
+   ```bash
+   npm run lint
+   ```
+
+4. **Bina versi produksi:**
+   ```bash
+   npm run build
+   ```
+
+5. **Pratonton binaan produksi:**
+   ```bash
+   npm run preview
+   ```
+
+---
+
+## Lesen
+
+Projek ini diedarkan di bawah lesen **Apache-2.0**.
